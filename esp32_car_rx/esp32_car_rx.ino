@@ -55,7 +55,7 @@ struct Velocity {
 #define FRONT_ECHO_PIN 22 // define EchoPin.
 #define MAX_DISTANCE 200 // Maximum sensor distance is rated at 400-500cm.
 #define MAX_FRONT_DIST 10.0 // closest we want to come
-float timeOut = MAX_DISTANCE * 60;
+float timeOut = MAX_DISTANCE * 600;
 int soundVelocity = 340; // define sound speed=340m/s
 
 // Global Variables
@@ -102,12 +102,12 @@ void ultra_sonic_t(void * pvParameters ) {
       forward_obsticle = true;
       set_wheel_speed();
       velocity_update = true;
-      Serial.printf("Avoid true, dist is %f", distance);
+      Serial.printf("Avoid true, dist is %f\n", distance);
       message_tx("Yes", MSG_TYPE_FRONT_OBSTICLE);
     }
     else {
       forward_obsticle = false;
-      Serial.printf("Avoid false, dist is %f", distance);
+      Serial.printf("Avoid false, dist is %f\n", distance);
       message_tx("No", MSG_TYPE_FRONT_OBSTICLE);
     }
   }
