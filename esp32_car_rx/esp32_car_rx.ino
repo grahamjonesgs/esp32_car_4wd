@@ -53,9 +53,9 @@ struct Velocity {
 // Ultra sonic definitions
 #define FRONT_TRIG_PIN 23 // define TrigPin
 #define FRONT_ECHO_PIN 22 // define EchoPin.
-#define MAX_DISTANCE 200 // Maximum sensor distance is rated at 400-500cm.
+#define MAX_DISTANCE 300 // Maximum sensor distance is rated at 400-500cm.
 #define MAX_FRONT_DIST 10.0 // closest we want to come
-float timeOut = MAX_DISTANCE * 600;
+float timeOut = MAX_DISTANCE * 60;
 int soundVelocity = 340; // define sound speed=340m/s
 
 // Global Variables
@@ -296,12 +296,17 @@ void network_connect() {
 float get_front_sonar() {
   unsigned long pingTime;
   float distance;
-  digitalWrite(FRONT_TRIG_PIN, HIGH); // make TRIG_PIN output high level lasting for 10μs to triger HC_SR04,
+  digitalWrite(FRONT_TRIG_PIN, HIGH); 
   delayMicroseconds(10);
   digitalWrite(FRONT_TRIG_PIN, LOW);
-  pingTime = pulseIn(FRONT_ECHO_PIN, HIGH, timeOut); // Wait HC-SR04 returning to the high level and measure out this waitting time
-  distance = (float)pingTime * soundVelocity / 2 / 10000; // calculate the distance according to the time
-  return distance; // return the distance value
+  pingTime = pulseIn(FRONT_ECHO_PIN, HIGH, timeOut); 
+  distance = (float)pingTime * soundVelocity / 2 / 10000; 
+  if(distance > 0){
+  return distance; 
+  }
+  else {
+    return 999;
+  }
 }
 
 void loop() {

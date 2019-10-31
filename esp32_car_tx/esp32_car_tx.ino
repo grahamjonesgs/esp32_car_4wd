@@ -101,7 +101,7 @@ void tft_read_t(void * pvParameters ) {
 
   //uint16_t calData[5] = TOUCH_CALIBRATION;
   //tft.setTouch(calData);
-  delay(5000);
+  delay(1000);
   while (true) {
     delay(10);
 
@@ -185,7 +185,7 @@ void tft_output_t(void * pvParameters ) {
 
 
   while (true) {
-    delay(500);
+    delay(50);
 
     // Remove old status messages
     if (statusChangeTime + STATUS_MESSAGE_TIME < now() && statusMessageDisplayed) {
@@ -361,14 +361,6 @@ void output_upd(int speed, int direction) {
 
   transmitPacket[5] = (char) speed;
   transmitPacket[7] = (char) direction;
-  /*
-    if (DEBUG_MSG) {
-    Serial.printf("Transmit packet is:");
-    for (int i = 0; i < sizeof(transmitPacket); i++) {
-    Serial.printf(" %02X", transmitPacket[i]);
-    }
-    Serial.printf(":\n");
-    }*/
   udp.broadcastTo((uint8_t *) transmitPacket, sizeof(transmitPacket), 1234);
 
 }
@@ -380,6 +372,6 @@ void loop() {
     network_connect();
   }
 
-  delay(200);
+  delay(2000);
 
 }
