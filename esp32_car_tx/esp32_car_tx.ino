@@ -63,6 +63,7 @@ char frontObsticle [CHAR_LEN];
 char backDistance [CHAR_LEN];
 char backObsticle [CHAR_LEN];
 char statusMessage[CHAR_LEN];
+char RPM[CHAR_LEN];
 bool carConnected = false;
 bool statusMessageUpdated = false;
 int carSpeed = 0;
@@ -103,7 +104,7 @@ void tft_read_t(void * pvParameters ) {
   //tft.setTouch(calData);
   delay(1000);
   while (true) {
-    delay(10);
+    delay(100);
 
     pressed = tft.getTouch(&x, &y);
     if (pressed) {
@@ -168,6 +169,7 @@ void tft_output_t(void * pvParameters ) {
   strcpy(frontObsticle, "N/A");
   strcpy(backDistance, "N/A");
   strcpy(backObsticle, "N/A");
+  strcpy(RPM, "N/A");
 
   tft.fillRect(TITLE_LEFT, TITLE_TOP, TITLE_RIGHT - TITLE_LEFT, TITLE_BOTTOM - TITLE_TOP, TFT_GREEN);
   tft.setTextColor(TFT_BLACK, TFT_GREEN);
@@ -180,12 +182,13 @@ void tft_output_t(void * pvParameters ) {
   tft.drawString("Back distance", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 2, 2);
   tft.drawString("Back obsticle", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 3, 2);
   tft.drawString("Car speed", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 4, 2);
-  tft.drawString("Car direction", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 5, 2);
-  tft.drawString("Car connected", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 6, 2);
+  tft.drawString("Car RPM", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 5, 2);
+  tft.drawString("Car direction", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 6, 2);
+  tft.drawString("Car connected", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 7, 2);
 
 
   while (true) {
-    delay(50);
+    delay(500);
 
     // Remove old status messages
     if (statusChangeTime + STATUS_MESSAGE_TIME < now() && statusMessageDisplayed) {
@@ -201,6 +204,7 @@ void tft_output_t(void * pvParameters ) {
       strcpy(frontObsticle, "N/A");
       strcpy(backDistance, "N/A");
       strcpy(backObsticle, "N/A");
+      strcpy(RPM, "N/A");
     }
     else {
       carConnected = true;
@@ -218,20 +222,22 @@ void tft_output_t(void * pvParameters ) {
 
 
     // Car status message
-    tft.fillRect(CAR_STATUS_LEFT + 100, CAR_STATUS_TOP, CAR_STATUS_RIGHT - STATUS_LEFT - 100, CAR_STATUS_GAP * 7, TFT_BLACK);
+
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString(String(frontDistance), CAR_STATUS_LEFT + 105, CAR_STATUS_TOP , 2);
-    tft.drawString(String(frontObsticle), CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP, 2);
-    tft.drawString(String(backDistance), CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 2 , 2);
-    tft.drawString(String(backObsticle), CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 3 , 2);
-    tft.drawString(String(carSpeed), CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 4 , 2);
-    tft.drawString(String(carDirection), CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 5 , 2);
+    tft.drawString(String(frontDistance) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP , 2);
+    tft.drawString(String(frontObsticle) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP, 2);
+    tft.drawString(String(backDistance) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 2 , 2);
+    tft.drawString(String(backObsticle) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 3 , 2);
+    tft.drawString(String(carSpeed) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 4 , 2);
+    tft.drawString(String(RPM) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 5 , 2);
+
+    tft.drawString(String(carDirection) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 6 , 2);
     if (carConnected) {
-      tft.drawString("Yes", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 6 , 2);
+      tft.drawString("Yes   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 7 , 2);
     }
     else {
       tft.setTextColor(TFT_RED, TFT_BLACK);
-      tft.drawString("No" , CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 6 , 2);
+      tft.drawString("No   " , CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 7 , 2);
       tft.setTextColor(TFT_WHITE, TFT_BLACK);
     }
   }
@@ -325,6 +331,11 @@ void udpHandle (AsyncUDPPacket packet) {
 
     case MSG_TYPE_FRONT_OBSTICLE:
       strncpy(frontObsticle, receivedPacket + 4 , packet.length() - 4);
+      frontObsticle[packet.length() - 4] = 0;
+      break;
+
+    case MSG_TYPE_RPM:
+      strncpy(RPM, receivedPacket + 4 , packet.length() - 4);
       frontObsticle[packet.length() - 4] = 0;
       break;
 

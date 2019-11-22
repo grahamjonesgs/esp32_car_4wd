@@ -31,32 +31,39 @@ struct Velocity {
 
 // Pin Definitions
 #define FRONT_LEFT_EN 16
-#define FRONT_LEFT_1 17
-#define FRONT_LEFT_2 5
+#define FRONT_LEFT_1 5
+#define FRONT_LEFT_2 18
 #define FRONT_LEFT_DIR false
-#define FRONT_RIGHT_1 18
+#define FRONT_RIGHT_1 21
 #define FRONT_RIGHT_2 19
-#define FRONT_RIGHT_EN 21
+#define FRONT_RIGHT_EN 23
 #define FRONT_RIGHT_DIR false
-#define BACK_LEFT_EN 13
-#define BACK_LEFT_1 14
-#define BACK_LEFT_2 27
+#define BACK_LEFT_EN 17
+#define BACK_LEFT_1 5
+#define BACK_LEFT_2 18
 #define BACK_LEFT_DIR false
-#define BACK_RIGHT_1 26
-#define BACK_RIGHT_2 25
-#define BACK_RIGHT_EN 33
-#define BACK_RIGHT_DIR true
+#define BACK_RIGHT_1 21
+#define BACK_RIGHT_2 19
+#define BACK_RIGHT_EN 22
+#define BACK_RIGHT_DIR false
 #define LED_PIN  LED_BUILTIN
+#define ENCODER_PIN 15
 
 #define DEBUG_MSG true
 
 // Ultra sonic definitions
-#define FRONT_TRIG_PIN 23 // define TrigPin
-#define FRONT_ECHO_PIN 22 // define EchoPin.
+#define FRONT_TRIG_PIN 35 // define TrigPin
+#define FRONT_ECHO_PIN 36 // define EchoPin.
 #define MAX_DISTANCE 300 // Maximum sensor distance is rated at 400-500cm.
-#define MAX_FRONT_DIST 10.0 // closest we want to come
+#define MAX_FRONT_DIST 30.0 // closest we want to come
+#define MAX_FRONT_DIST_FAST 60.0 // closest we want to come when fast
 float timeOut = MAX_DISTANCE * 60;
 int soundVelocity = 340; // define sound speed=340m/s
+
+// RPM definitions
+unsigned int rpmCounter = 0;
+unsigned int oldRpmCounter = 0;
+float rpm;
 
 // Global Variables
 int speedPin[4] = {FRONT_LEFT_EN, FRONT_RIGHT_EN, BACK_LEFT_EN, BACK_RIGHT_EN};
@@ -65,7 +72,8 @@ DirectionPin directionPin[4] {{FRONT_LEFT_1, FRONT_LEFT_2}, {FRONT_RIGHT_1, FRON
 Velocity velocity;
 int wheelOutput[4];
 bool velocity_update = true;
-bool forward_obsticle = true;
+bool forward_obsticle = false;
+bool forward_obsticle_fast = false;
 
 AsyncUDP udp;
 
@@ -83,11 +91,19 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   pinMode(FRONT_TRIG_PIN, OUTPUT); // set TRIG_PIN to output mode
   pinMode(FRONT_ECHO_PIN, INPUT); // set ECHO_PIN to input mode
+  pinMode(ENCODER_PIN, INPUT); // set ECHO_PIN to input mode
   velocity.speed = 0;
   velocity.rotation = 0;
   network_connect();
   message_tx("Car connected to WiFi", MSG_TYPE_STATUS);
-  xTaskCreatePinnedToCore( ultra_sonic_t, "TFT Update", 8192 , NULL, 9, NULL, 0 );
+  //xTaskCreatePinnedToCore( ultra_sonic_t, "TFT Update", 8192 , NULL, 9, NULL, 0 );
+
+  attachInterrupt(ENCODER_PIN, countpulse, RISING);
+
+}
+
+void countpulse() {
+  rpmCounter++;
 }
 
 void ultra_sonic_t(void * pvParameters ) {
@@ -102,13 +118,21 @@ void ultra_sonic_t(void * pvParameters ) {
       forward_obsticle = true;
       set_wheel_speed();
       velocity_update = true;
-      Serial.printf("Avoid true, dist is %f\n", distance);
       message_tx("Yes", MSG_TYPE_FRONT_OBSTICLE);
     }
     else {
-      forward_obsticle = false;
-      Serial.printf("Avoid false, dist is %f\n", distance);
-      message_tx("No", MSG_TYPE_FRONT_OBSTICLE);
+      if (distance < MAX_FRONT_DIST_FAST) {
+        forward_obsticle_fast = true;
+        set_wheel_speed();
+        velocity_update = true;
+        message_tx("Fast", MSG_TYPE_FRONT_OBSTICLE);
+      }
+
+      else {
+        forward_obsticle = false;
+        forward_obsticle_fast = false;
+        message_tx("No", MSG_TYPE_FRONT_OBSTICLE);
+      }
     }
   }
 }
@@ -120,12 +144,12 @@ void message_tx (String message, char message_type) {
   if (message.length() > TX_MESSAGE_LEN) {
     return;
   }
-  for (int i=i;i<sizeof(full_message);i++){
-    full_message[i]=0;
+  for (int i = i; i < sizeof(full_message); i++) {
+    full_message[i] = 0;
   }
   memcpy(full_message, serialNum, sizeof(serialNum));
   full_message[4] = (char) message_type;
-  message.toCharArray(full_message + 5, message.length()+1);
+  message.toCharArray(full_message + 5, message.length() + 1);
   udp.broadcastTo(full_message, UPD_PORT);
 }
 
@@ -145,28 +169,44 @@ void set_wheel_speed () {
       wheelOutput[3] = 0;
     }
     else {
-      if (velocity.rotation > 0) {
-        wheelOutput[0] = velocity.speed - velocity.rotation;
-        wheelOutput[1] = velocity.speed;
-        wheelOutput[2] = velocity.speed - velocity.rotation;
-        wheelOutput[3] = velocity.speed;
+      if (velocity.speed > 0) {
+        if (velocity.rotation > 0) {
+          wheelOutput[0] = velocity.speed - velocity.rotation;
+          wheelOutput[1] = velocity.speed;
+          wheelOutput[2] = velocity.speed - velocity.rotation;
+          wheelOutput[3] = velocity.speed;
+        }
+        else {
+          wheelOutput[0] = velocity.speed;
+          wheelOutput[1] = velocity.speed + velocity.rotation;
+          wheelOutput[2] = velocity.speed;
+          wheelOutput[3] = velocity.speed + velocity.rotation;
+        }
       }
+
       else {
-        wheelOutput[0] = velocity.speed;
-        wheelOutput[1] = velocity.speed + velocity.rotation;
-        wheelOutput[2] = velocity.speed;
-        wheelOutput[3] = velocity.speed + velocity.rotation;
+        if (velocity.rotation > 0) {
+          wheelOutput[0] = velocity.speed + velocity.rotation;
+          wheelOutput[1] = velocity.speed;
+          wheelOutput[2] = velocity.speed + velocity.rotation;
+          wheelOutput[3] = velocity.speed;
+        }
+        else {
+          wheelOutput[0] = velocity.speed;
+          wheelOutput[1] = velocity.speed - velocity.rotation;
+          wheelOutput[2] = velocity.speed;
+          wheelOutput[3] = velocity.speed - velocity.rotation;
+        }
       }
     }
   }
-
   for (int i = 0; i < 4; i++) {
     if (DEBUG_MSG) {
-      Serial.printf(" Wheel % i, speed % i. ", i, wheelOutput[i]);
+      //Serial.printf(" Wheel % i, speed % i. ", i, wheelOutput[i]);
     }
   }
   if (DEBUG_MSG) {
-    Serial.println();
+    //Serial.println();
   }
 }
 
@@ -242,15 +282,18 @@ void udpHandle (AsyncUDPPacket packet) {
   }
 
   if (speed > 0 && forward_obsticle == true) {
-    Serial.printf("Forward obsticle\n");
     velocity.speed = 0;
   }
-
-  digitalWrite(LED_PIN, HIGH);
-  delay(50);
-  digitalWrite(LED_PIN, LOW);
+  if (speed > 0 && forward_obsticle_fast == true) {
+    velocity.speed = velocity.speed / 2;
+  }
+  //digitalWrite(LED_PIN, HIGH);
+  //delay(50);
+  //digitalWrite(LED_PIN, LOW);
+  //Serial.print(speed);
   set_wheel_speed();
   velocity_update = true;
+
 
 }
 
@@ -296,13 +339,13 @@ void network_connect() {
 float get_front_sonar() {
   unsigned long pingTime;
   float distance;
-  digitalWrite(FRONT_TRIG_PIN, HIGH); 
+  digitalWrite(FRONT_TRIG_PIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(FRONT_TRIG_PIN, LOW);
-  pingTime = pulseIn(FRONT_ECHO_PIN, HIGH, timeOut); 
-  distance = (float)pingTime * soundVelocity / 2 / 10000; 
-  if(distance > 0){
-  return distance; 
+  pingTime = pulseIn(FRONT_ECHO_PIN, HIGH, timeOut);
+  distance = (float)pingTime * soundVelocity / 2 / 10000;
+  if (distance > 0) {
+    return distance;
   }
   else {
     return 999;
@@ -310,7 +353,8 @@ float get_front_sonar() {
 }
 
 void loop() {
-
+  static uint32_t previousMillis;
+  
   if (WiFi.status() != WL_CONNECTED) {
     network_connect();
   }
@@ -318,6 +362,14 @@ void loop() {
   if (velocity_update) {
     velocity_update = false;
     motor_control();
+  }
+
+  if (millis() - previousMillis >= 1000) {
+    rpm = ((float)(rpmCounter - oldRpmCounter) / 20.0) * 60.0;
+    //Serial.printf("Current speed is %f, counter is %i, old counter is %i\n", rpm, counter, oldCounter);
+    oldRpmCounter = rpmCounter;
+    previousMillis += 1000;
+    message_tx(String(rpm), MSG_TYPE_RPM);
   }
 
 
