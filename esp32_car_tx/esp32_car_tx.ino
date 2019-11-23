@@ -52,7 +52,6 @@
 #define TOUCH_CALIBRATION { 423, 3334, 446, 3168, 7 }
 #define CAR_MESSAGE_TIMEOUT 1000
 
-
 AsyncUDP udp;
 TFT_eSPI tft = TFT_eSPI();
 GfxUi ui = GfxUi(&tft);
@@ -181,14 +180,14 @@ void tft_output_t(void * pvParameters ) {
   tft.drawString("Front obsticle", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP, 2);
   tft.drawString("Back distance", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 2, 2);
   tft.drawString("Back obsticle", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 3, 2);
-  tft.drawString("Car speed", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 4, 2);
-  tft.drawString("Car RPM", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 5, 2);
+  tft.drawString("Car RPM", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 4, 2);
+  tft.drawString("Car speed", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 5, 2);
   tft.drawString("Car direction", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 6, 2);
   tft.drawString("Car connected", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 7, 2);
 
 
   while (true) {
-    delay(500);
+    delay(50);
 
     // Remove old status messages
     if (statusChangeTime + STATUS_MESSAGE_TIME < now() && statusMessageDisplayed) {
@@ -200,11 +199,11 @@ void tft_output_t(void * pvParameters ) {
     if (lastCarMessage + CAR_MESSAGE_TIMEOUT < millis())
     {
       carConnected = false;
-      strcpy(frontDistance, "N/A");
-      strcpy(frontObsticle, "N/A");
-      strcpy(backDistance, "N/A");
-      strcpy(backObsticle, "N/A");
-      strcpy(RPM, "N/A");
+      strcpy(frontDistance, "N/A          ");
+      strcpy(frontObsticle, "N/A          ");
+      strcpy(backDistance, "N/A          ");
+      strcpy(backObsticle, "N/A          ");
+      strcpy(RPM, "N/A          ");
     }
     else {
       carConnected = true;
@@ -224,12 +223,13 @@ void tft_output_t(void * pvParameters ) {
     // Car status message
 
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString(String(frontDistance) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP , 2);
-    tft.drawString(String(frontObsticle) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP, 2);
-    tft.drawString(String(backDistance) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 2 , 2);
-    tft.drawString(String(backObsticle) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 3 , 2);
-    tft.drawString(String(carSpeed) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 4 , 2);
-    tft.drawString(String(RPM) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 5 , 2);
+    tft.drawString(String(frontDistance) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP , 2);
+    tft.drawString(String(frontObsticle) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP, 2);
+    tft.drawString(String(backDistance) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 2 , 2);
+    tft.drawString(String(backObsticle) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 3 , 2);
+    tft.drawString(String(RPM) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 4 , 2);
+    tft.drawString(String(carSpeed) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 5 , 2);
+   
 
     tft.drawString(String(carDirection) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 6 , 2);
     if (carConnected) {
@@ -336,7 +336,7 @@ void udpHandle (AsyncUDPPacket packet) {
 
     case MSG_TYPE_RPM:
       strncpy(RPM, receivedPacket + 4 , packet.length() - 4);
-      frontObsticle[packet.length() - 4] = 0;
+      RPM[packet.length() - 4] = 0;
       break;
 
     case MSG_TYPE_NETWORK:

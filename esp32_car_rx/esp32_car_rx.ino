@@ -57,12 +57,13 @@ struct Velocity {
 #define MAX_DISTANCE 300 // Maximum sensor distance is rated at 400-500cm.
 #define MAX_FRONT_DIST 30.0 // closest we want to come
 #define MAX_FRONT_DIST_FAST 60.0 // closest we want to come when fast
+#define HEARTBEAT_TIMEOUT 200  // delay millis before sending heartbeat 
 float timeOut = MAX_DISTANCE * 60;
 int soundVelocity = 340; // define sound speed=340m/s
 
+
 // RPM definitions
 unsigned int rpmCounter = 0;
-unsigned int oldRpmCounter = 0;
 float rpm;
 
 // Global Variables
@@ -74,6 +75,7 @@ int wheelOutput[4];
 bool velocity_update = true;
 bool forward_obsticle = false;
 bool forward_obsticle_fast = false;
+static uint32_t lastMessageTime = 0;
 
 AsyncUDP udp;
 
@@ -151,6 +153,7 @@ void message_tx (String message, char message_type) {
   full_message[4] = (char) message_type;
   message.toCharArray(full_message + 5, message.length() + 1);
   udp.broadcastTo(full_message, UPD_PORT);
+  lastMessageTime=millis();
 }
 
 void set_wheel_speed () {
@@ -353,8 +356,8 @@ float get_front_sonar() {
 }
 
 void loop() {
-  static uint32_t previousMillis;
-  
+  static uint32_t previousRpmMillis = 0;
+
   if (WiFi.status() != WL_CONNECTED) {
     network_connect();
   }
@@ -364,12 +367,15 @@ void loop() {
     motor_control();
   }
 
-  if (millis() - previousMillis >= 1000) {
-    rpm = ((float)(rpmCounter - oldRpmCounter) / 20.0) * 60.0;
-    //Serial.printf("Current speed is %f, counter is %i, old counter is %i\n", rpm, counter, oldCounter);
-    oldRpmCounter = rpmCounter;
-    previousMillis += 1000;
-    message_tx(String(rpm), MSG_TYPE_RPM);
+  if (millis() - previousRpmMillis >= 1000) {
+    rpm = ((float)(rpmCounter) / 20.0) * 60.0;
+    rpmCounter = 0;
+    previousRpmMillis = millis();
+    message_tx(String(rpm,0), MSG_TYPE_RPM);
+  }
+
+  if (millis() - lastMessageTime >= HEARTBEAT_TIMEOUT) {
+    message_tx("", MSG_TYPE_HEARTBEAT);
   }
 
 
