@@ -47,7 +47,7 @@ struct Velocity {
 #define BACK_RIGHT_EN 22
 #define BACK_RIGHT_DIR false
 #define LED_PIN  LED_BUILTIN
-#define ENCODER_PIN 15
+#define RIGHT_ENCODER_PIN 15
 
 #define DEBUG_MSG true
 
@@ -63,8 +63,9 @@ int soundVelocity = 340; // define sound speed=340m/s
 
 
 // RPM definitions
-unsigned int rpmCounter = 0;
-float rpm;
+unsigned int rightRpmCounter = 0;
+float rightRpm;
+#define MAX_RPM 800
 
 // Global Variables
 int speedPin[4] = {FRONT_LEFT_EN, FRONT_RIGHT_EN, BACK_LEFT_EN, BACK_RIGHT_EN};
@@ -72,6 +73,7 @@ bool wheelDirection[4] = {FRONT_LEFT_DIR, FRONT_RIGHT_DIR, BACK_LEFT_DIR, BACK_R
 DirectionPin directionPin[4] {{FRONT_LEFT_1, FRONT_LEFT_2}, {FRONT_RIGHT_1, FRONT_RIGHT_2}, {BACK_LEFT_1, BACK_LEFT_2}, {BACK_RIGHT_1, BACK_RIGHT_2}};
 Velocity velocity;
 int wheelOutput[4];
+int wheelOutputPwm[4] = {0, 0, 0, 0};
 bool velocity_update = true;
 bool forward_obsticle = false;
 bool forward_obsticle_fast = false;
@@ -93,19 +95,19 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   pinMode(FRONT_TRIG_PIN, OUTPUT); // set TRIG_PIN to output mode
   pinMode(FRONT_ECHO_PIN, INPUT); // set ECHO_PIN to input mode
-  pinMode(ENCODER_PIN, INPUT); // set ECHO_PIN to input mode
+  pinMode(RIGHT_ENCODER_PIN, INPUT); // set ECHO_PIN to input mode
   velocity.speed = 0;
   velocity.rotation = 0;
   network_connect();
   message_tx("Car connected to WiFi", MSG_TYPE_STATUS);
   //xTaskCreatePinnedToCore( ultra_sonic_t, "TFT Update", 8192 , NULL, 9, NULL, 0 );
 
-  attachInterrupt(ENCODER_PIN, countpulse, RISING);
+  attachInterrupt(RIGHT_ENCODER_PIN, rightCountPulse, RISING);
 
 }
 
-void countpulse() {
-  rpmCounter++;
+void rightCountPulse() {
+  rightRpmCounter++;
 }
 
 void ultra_sonic_t(void * pvParameters ) {
@@ -153,7 +155,7 @@ void message_tx (String message, char message_type) {
   full_message[4] = (char) message_type;
   message.toCharArray(full_message + 5, message.length() + 1);
   udp.broadcastTo(full_message, UPD_PORT);
-  lastMessageTime=millis();
+  lastMessageTime = millis();
 }
 
 void set_wheel_speed () {
@@ -214,12 +216,31 @@ void set_wheel_speed () {
 }
 
 void motor_control () {
-  // Update motor outputs based on status
   for (int i = 0; i < 4; i++) {
-    analogWrite(speedPin[i], abs(wheelOutput[i]));
+    if (rightRpm < map(wheelOutput[i], 0, 255, 0, MAX_RPM)) {
+      wheelOutputPwm[i]++;
+      if (wheelOutputPwm[i] > 255) {
+        wheelOutputPwm[i] = 255;
+      }
+    }
+    else {
+      wheelOutputPwm[i]--;
+      if (wheelOutputPwm[i] <1) {
+        wheelOutputPwm[i]=0;
+      }
+    }
+
+  }
+
+
+  for (int i = 0; i < 4; i++) {
+    analogWrite(speedPin[i], abs(wheelOutputPwm[i]));
     if (DEBUG_MSG) {
       //Serial.printf("Wheel % i, pin % i, speed % i ", i, speedPin[i], abs(wheelOutput[i]));
     }
+
+
+
     if ((wheelOutput[i] > 0 && wheelDirection[i]) || (wheelOutput[i] < 0 && !wheelDirection[i])) {
       if (DEBUG_MSG) {
         //Serial.printf(" first direction, pin % i high, pin % i low\n", directionPin[i].one, directionPin[i].two);
@@ -362,21 +383,21 @@ void loop() {
     network_connect();
   }
 
-  if (velocity_update) {
-    velocity_update = false;
+  //if (velocity_update) {
+    //velocity_update = false;
     motor_control();
-  }
+  //}
 
-  if (millis() - previousRpmMillis >= 1000) {
-    rpm = ((float)(rpmCounter) / 20.0) * 60.0;
-    rpmCounter = 0;
+  if (millis() - previousRpmMillis >= 200) {
+    rightRpm = ((float)(rightRpmCounter) / 20.0) * 300.0;
+    rightRpmCounter = 0;
     previousRpmMillis = millis();
-    message_tx(String(rpm,0), MSG_TYPE_RPM);
+    message_tx(String(rightRpm, 1), MSG_TYPE_RPM);
   }
 
   if (millis() - lastMessageTime >= HEARTBEAT_TIMEOUT) {
     message_tx("", MSG_TYPE_HEARTBEAT);
   }
-
+ delay(50);
 
 }
