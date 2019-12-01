@@ -65,7 +65,8 @@ int soundVelocity = 340; // define sound speed=340m/s
 // RPM definitions
 unsigned int rightRpmCounter = 0;
 float rightRpm;
-#define MAX_RPM 800
+#define MAX_RPM 400
+#define MIN_OUTPUT 50 // Lowest effective output to move motor
 
 // Global Variables
 int speedPin[4] = {FRONT_LEFT_EN, FRONT_RIGHT_EN, BACK_LEFT_EN, BACK_RIGHT_EN};
@@ -216,25 +217,31 @@ void set_wheel_speed () {
 }
 
 void motor_control () {
-  for (int i = 0; i < 4; i++) {
+
+  /*for (int i = 0; i < 4; i++) {
+    if (wheelOutputPwm[i] < MIN_OUTPUT) {
+
+      wheelOutputPwm[i] = MIN_OUTPUT;
+    }
     if (rightRpm < map(wheelOutput[i], 0, 255, 0, MAX_RPM)) {
-      wheelOutputPwm[i]++;
+      wheelOutputPwm[i] += 16;
       if (wheelOutputPwm[i] > 255) {
         wheelOutputPwm[i] = 255;
       }
     }
     else {
-      wheelOutputPwm[i]--;
-      if (wheelOutputPwm[i] <1) {
-        wheelOutputPwm[i]=0;
+      wheelOutputPwm[i] -= 16;
+      if (wheelOutputPwm[i] < MIN_OUTPUT) {
+        wheelOutputPwm[i] = MIN_OUTPUT;
       }
     }
 
-  }
+    }*/
 
 
   for (int i = 0; i < 4; i++) {
-    analogWrite(speedPin[i], abs(wheelOutputPwm[i]));
+    //analogWrite(speedPin[i], abs(wheelOutputPwm[i])); used for RMP based control
+    analogWrite(speedPin[i], abs(wheelOutput[i]));
     if (DEBUG_MSG) {
       //Serial.printf("Wheel % i, pin % i, speed % i ", i, speedPin[i], abs(wheelOutput[i]));
     }
@@ -384,8 +391,8 @@ void loop() {
   }
 
   //if (velocity_update) {
-    //velocity_update = false;
-    motor_control();
+  //velocity_update = false;
+  //motor_control();
   //}
 
   if (millis() - previousRpmMillis >= 200) {
@@ -393,11 +400,12 @@ void loop() {
     rightRpmCounter = 0;
     previousRpmMillis = millis();
     message_tx(String(rightRpm, 1), MSG_TYPE_RPM);
+    motor_control();
   }
 
   if (millis() - lastMessageTime >= HEARTBEAT_TIMEOUT) {
     message_tx("", MSG_TYPE_HEARTBEAT);
   }
- delay(50);
+  delay(5);
 
 }

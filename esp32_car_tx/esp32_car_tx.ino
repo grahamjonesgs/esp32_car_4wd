@@ -92,7 +92,8 @@ void tft_draw_string_centre(const char* message, int leftx, int rightx, int y, i
 }
 
 void tft_read_t(void * pvParameters ) {
-
+#define SLOW_SPEED 130
+#define SLOW_TURN 150
   uint16_t x = 0, y = 0;
   int speed;
   int direction;
@@ -108,22 +109,42 @@ void tft_read_t(void * pvParameters ) {
     pressed = tft.getTouch(&x, &y);
     if (pressed) {
       lastPressed = now();
-      speed = map(y, 0, 230, -255, 255);
-      if (speed > 0) {
+      /*speed = map(y, 0, 230, -255, 255);
+        if (speed > 0) {
         speed = map(speed, 0, 255, 120, 255);
+        }
+        else {
+        speed = map(speed, 0, -255, -120, -255);
+        }
+
+        if ((direction > 200) || (direction < -200)) {
+        speed = 0;
+        }
+
+        direction = map(x, 320, 0, -255, 255);*/
+
+      if (y > 115) {
+        speed = SLOW_SPEED;
       }
       else {
-        speed = map(speed, 0, -255, -120, -255);
+        speed = - SLOW_SPEED;
       }
-
-      if ((direction > 200) || (direction < -200)) {
+      if ((x > 220)) {
         speed = 0;
-      }
+        direction = SLOW_TURN;
+        }
+      if ((x < 100)) {
+        speed = 0;
+        direction = - SLOW_TURN;
+        }
 
-      direction = map(x, 320, 0, -255, 255);
+
       if (DEBUG_MSG) {
         Serial.printf("Press detected at x:%i, y:%i, speed %i, direction %i\n", x, y, speed, direction);
       }
+
+
+
     }
     else {
       speed = 0;
@@ -195,7 +216,7 @@ void tft_output_t(void * pvParameters ) {
       statusMessageDisplayed = false;
     }
 
-    Serial.printf("lastCarMessage is %i, millis is %i\n", lastCarMessage, millis());
+    //Serial.printf("lastCarMessage is %i, millis is %i\n", lastCarMessage, millis());
     if (lastCarMessage + CAR_MESSAGE_TIMEOUT < millis())
     {
       carConnected = false;
@@ -229,7 +250,7 @@ void tft_output_t(void * pvParameters ) {
     tft.drawString(String(backObsticle) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 3 , 2);
     tft.drawString(String(RPM) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 4 , 2);
     tft.drawString(String(carSpeed) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 5 , 2);
-   
+
 
     tft.drawString(String(carDirection) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 6 , 2);
     if (carConnected) {
