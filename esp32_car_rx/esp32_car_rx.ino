@@ -48,6 +48,7 @@ struct Velocity {
 #define BACK_RIGHT_DIR false
 #define LED_PIN  LED_BUILTIN
 #define RIGHT_ENCODER_PIN 15
+#define LEFT_ENCODER_PIN 2
 #define VOLTAGE_DIVIDER_PIN 34
 #define VOLTAGE_DIVIDER_RATIO 5.06 *3.3 // Calulated from actuals
 #define VOLTAGE_MESSAGE_DELAY 5000 // Time between voltage messages
@@ -67,9 +68,10 @@ int soundVelocity = 340; // define sound speed=340m/s
 
 // RPM definitions
 unsigned int rightRpmCounter = 0;
+unsigned int leftRpmCounter = 0;
 float rightRpm;
-#define MAX_RPM 400
-#define MIN_OUTPUT 50 // Lowest effective output to move motor
+float leftRpm;
+
 
 // Global Variables
 int speedPin[4] = {FRONT_LEFT_EN, FRONT_RIGHT_EN, BACK_LEFT_EN, BACK_RIGHT_EN};
@@ -108,12 +110,17 @@ void setup() {
   //xTaskCreatePinnedToCore( ultra_sonic_t, "TFT Update", 8192 , NULL, 9, NULL, 0 );
 
   attachInterrupt(RIGHT_ENCODER_PIN, rightCountPulse, RISING);
-
+  attachInterrupt(LEFT_ENCODER_PIN, leftCountPulse, RISING);
 }
 
 void rightCountPulse() {
   rightRpmCounter++;
 }
+
+void leftCountPulse() {
+  leftRpmCounter++;
+}
+
 
 void ultra_sonic_t(void * pvParameters ) {
 
@@ -403,9 +410,11 @@ void loop() {
   if (millis() - previousRpmMillis >= 200) {
     rightRpm = ((float)(rightRpmCounter) / 20.0) * 300.0;
     rightRpmCounter = 0;
+    leftRpm = ((float)(leftRpmCounter) / 20.0) * 300.0;
+    leftRpmCounter = 0;
     previousRpmMillis = millis();
-    message_tx(String(rightRpm, 1), MSG_TYPE_RPM);
-    motor_control();
+    message_tx(String(rightRpm, 1), MSG_TYPE_RIGHT_RPM);
+    message_tx(String(leftRpm, 1), MSG_TYPE_LEFT_RPM);
   }
 
   if (millis() - lastVoltageMessageTime >= VOLTAGE_MESSAGE_DELAY) {
