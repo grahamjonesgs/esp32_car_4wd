@@ -4,7 +4,6 @@
   #define TFT_MOSI 23
   #define TFT_SCLK 18
   #define TFT_CS   21  // Chip select control pin
-  #define TFT_DC    19  // Data Command control pin
   #define TFT_RST   5 // Reset pin (could connect to RST pin)
   #define TOUCH_CS 2     // Chip select pin (T_CS) of touch screen
 
@@ -63,6 +62,7 @@ char backDistance [CHAR_LEN];
 char backObsticle [CHAR_LEN];
 char statusMessage[CHAR_LEN];
 char RPM[CHAR_LEN];
+char Voltage[CHAR_LEN];
 bool carConnected = false;
 bool statusMessageUpdated = false;
 int carSpeed = 0;
@@ -92,8 +92,9 @@ void tft_draw_string_centre(const char* message, int leftx, int rightx, int y, i
 }
 
 void tft_read_t(void * pvParameters ) {
-#define SLOW_SPEED 130
-#define SLOW_TURN 150
+#define SLOW_SPEED 120
+#define SLOW_TURN 175
+  int delta = 0;
   uint16_t x = 0, y = 0;
   int speed;
   int direction;
@@ -122,21 +123,31 @@ void tft_read_t(void * pvParameters ) {
         }
 
         direction = map(x, 320, 0, -255, 255);*/
+      Serial.printf("Touch x, %i, y %i\n", x, y);
+      if (y < 30 && x < 50) {
+        delta--;
+        continue;
+      }
+      if (y > 200 && x < 50) {
+        delta++;
+        continue;
+      }
+
 
       if (y > 115) {
-        speed = SLOW_SPEED;
+        speed = SLOW_SPEED + delta;
       }
       else {
-        speed = - SLOW_SPEED;
+        speed = - (SLOW_SPEED  + delta);
       }
       if ((x > 220)) {
         speed = 0;
-        direction = SLOW_TURN;
-        }
+        direction = SLOW_TURN + delta;
+      }
       if ((x < 100)) {
         speed = 0;
-        direction = - SLOW_TURN;
-        }
+        direction = - (SLOW_TURN + delta);
+      }
 
 
       if (DEBUG_MSG) {
@@ -190,6 +201,7 @@ void tft_output_t(void * pvParameters ) {
   strcpy(backDistance, "N/A");
   strcpy(backObsticle, "N/A");
   strcpy(RPM, "N/A");
+  strcpy(Voltage, "N/A");
 
   tft.fillRect(TITLE_LEFT, TITLE_TOP, TITLE_RIGHT - TITLE_LEFT, TITLE_BOTTOM - TITLE_TOP, TFT_GREEN);
   tft.setTextColor(TFT_BLACK, TFT_GREEN);
@@ -202,9 +214,10 @@ void tft_output_t(void * pvParameters ) {
   tft.drawString("Back distance", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 2, 2);
   tft.drawString("Back obsticle", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 3, 2);
   tft.drawString("Car RPM", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 4, 2);
-  tft.drawString("Car speed", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 5, 2);
-  tft.drawString("Car direction", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 6, 2);
-  tft.drawString("Car connected", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 7, 2);
+  tft.drawString("Voltage", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 5, 2);
+  tft.drawString("Car speed", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 6, 2);
+  tft.drawString("Car direction", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 7, 2);
+  tft.drawString("Car connected", CAR_STATUS_LEFT, CAR_STATUS_TOP + CAR_STATUS_GAP * 8, 2);
 
 
   while (true) {
@@ -225,6 +238,7 @@ void tft_output_t(void * pvParameters ) {
       strcpy(backDistance, "N/A          ");
       strcpy(backObsticle, "N/A          ");
       strcpy(RPM, "N/A          ");
+      strcpy(Voltage, "N/A          ");
     }
     else {
       carConnected = true;
@@ -244,21 +258,22 @@ void tft_output_t(void * pvParameters ) {
     // Car status message
 
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString(String(frontDistance) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP , 2);
-    tft.drawString(String(frontObsticle) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP, 2);
-    tft.drawString(String(backDistance) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 2 , 2);
-    tft.drawString(String(backObsticle) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 3 , 2);
-    tft.drawString(String(RPM) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 4 , 2);
-    tft.drawString(String(carSpeed) + "     ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 5 , 2);
+    tft.drawString(String(frontDistance) + "       ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP , 2);
+    tft.drawString(String(frontObsticle) + "       ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP, 2);
+    tft.drawString(String(backDistance) + "       ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 2 , 2);
+    tft.drawString(String(backObsticle) + "       ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 3 , 2);
+    tft.drawString(String(RPM) + "       ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 4 , 2);
+    tft.drawString(String(Voltage) + "       ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 5 , 2);
+    tft.drawString(String(carSpeed) + "       ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 6 , 2);
 
 
-    tft.drawString(String(carDirection) + "   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 6 , 2);
+    tft.drawString(String(carDirection) + "      ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 7 , 2);
     if (carConnected) {
-      tft.drawString("Yes   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 7 , 2);
+      tft.drawString("Yes   ", CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 8 , 2);
     }
     else {
       tft.setTextColor(TFT_RED, TFT_BLACK);
-      tft.drawString("No   " , CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 7 , 2);
+      tft.drawString("No    " , CAR_STATUS_LEFT + 105, CAR_STATUS_TOP + CAR_STATUS_GAP * 8 , 2);
       tft.setTextColor(TFT_WHITE, TFT_BLACK);
     }
   }
@@ -340,24 +355,30 @@ void udpHandle (AsyncUDPPacket packet) {
   switch (message_type) {
     case MSG_TYPE_STATUS:
 
-      strncpy(statusMessage, receivedPacket + 4 , packet.length() - 4);
-      statusMessage[packet.length() - 4] = 0;
+      strncpy(statusMessage, receivedPacket + 5 , packet.length() - 5);
+      statusMessage[packet.length() - 5] = 0;
       statusMessageUpdated = true;
       break;
 
     case MSG_TYPE_FRONT_DISTANCE:
-      strncpy(frontDistance, receivedPacket + 4 , packet.length() - 4);
-      frontDistance[packet.length() - 4] = 0;
+      strncpy(frontDistance, receivedPacket + 5 , packet.length() - 5);
+      frontDistance[packet.length() - 5] = 0;
       break;
 
     case MSG_TYPE_FRONT_OBSTICLE:
-      strncpy(frontObsticle, receivedPacket + 4 , packet.length() - 4);
-      frontObsticle[packet.length() - 4] = 0;
+      strncpy(frontObsticle, receivedPacket + 5 , packet.length() - 5);
+      frontObsticle[packet.length() - 5] = 0;
       break;
 
     case MSG_TYPE_RPM:
-      strncpy(RPM, receivedPacket + 4 , packet.length() - 4);
-      RPM[packet.length() - 4] = 0;
+      strncpy(RPM, receivedPacket + 5 , packet.length() - 5);
+      RPM[packet.length() - 5] = 0;
+      break;
+
+    case MSG_TYPE_VOLTAGE:
+      strncpy(Voltage, receivedPacket + 5 , packet.length() - 5);
+      Voltage[packet.length() - 5] = 'v';
+      Voltage[packet.length() - 4] = 0;
       break;
 
     case MSG_TYPE_NETWORK:

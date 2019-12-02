@@ -48,6 +48,9 @@ struct Velocity {
 #define BACK_RIGHT_DIR false
 #define LED_PIN  LED_BUILTIN
 #define RIGHT_ENCODER_PIN 15
+#define VOLTAGE_DIVIDER_PIN 34
+#define VOLTAGE_DIVIDER_RATIO 5.06 *3.3 // Calulated from actuals
+#define VOLTAGE_MESSAGE_DELAY 5000 // Time between voltage messages
 
 #define DEBUG_MSG true
 
@@ -79,6 +82,7 @@ bool velocity_update = true;
 bool forward_obsticle = false;
 bool forward_obsticle_fast = false;
 static uint32_t lastMessageTime = 0;
+static uint32_t lastVoltageMessageTime = 0;
 
 AsyncUDP udp;
 
@@ -385,6 +389,7 @@ float get_front_sonar() {
 
 void loop() {
   static uint32_t previousRpmMillis = 0;
+  int voltageInput = 0;
 
   if (WiFi.status() != WL_CONNECTED) {
     network_connect();
@@ -401,6 +406,12 @@ void loop() {
     previousRpmMillis = millis();
     message_tx(String(rightRpm, 1), MSG_TYPE_RPM);
     motor_control();
+  }
+
+  if (millis() - lastVoltageMessageTime >= VOLTAGE_MESSAGE_DELAY) {
+    voltageInput = analogRead(VOLTAGE_DIVIDER_PIN);
+    message_tx(String(voltageInput * VOLTAGE_DIVIDER_RATIO / 4096.0, 1), MSG_TYPE_VOLTAGE);
+    lastVoltageMessageTime = millis();
   }
 
   if (millis() - lastMessageTime >= HEARTBEAT_TIMEOUT) {
